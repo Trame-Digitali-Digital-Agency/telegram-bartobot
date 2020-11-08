@@ -1,0 +1,7 @@
+authtoken: 79vsE9iTDkPn8NhJDpyhh_6QzDtpcTebV2SF7zgBEfB
+web_addr: www.exupery.it:4040
+tunnels:
+  bartobot:
+    addr: 3000
+    proto: http
+    bind_tls: true

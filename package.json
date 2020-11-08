@@ -1,0 +1,14 @@
+{
+  "name": "bartobot",
+  "version": "1.0.0",
+  "description": "this is the description",
+  "main": "index.py",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "microcule index.py"
+  },
+  "dependencies": {
+    "microcule": "*"
+  },
+  "license": "MIT"
+}

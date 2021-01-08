@@ -14,6 +14,7 @@ import random
 import re
 import emoji
 import json
+import requests
 from pprint import pprint
 from urllib import urlopen
 import datetime, time
@@ -24,6 +25,16 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+
+# funzione dei bitcoin
+def getBitcoinPrice():
+    URL = "https://www.bitstamp.net/api/ticker/"
+    try:
+        r = requests.get(URL)
+        priceFloat = json.loads(r.text)["last"]
+        return round(float(priceFloat), 2)
+    except requests.ConnectionError:
+        return "Bitstamp API non va"
 
 # Update "
 # {'update_id': 323232463,
@@ -56,6 +67,9 @@ def callbacks(bot,update):
     elif update.callback_query.data == 'info':
         # info=json.dumps(bot.getUpdates(),sort_keys=True, indent=4)
         bot.answer_callback_query(update.callback_query.id, text=update.callback_query.message.chat.id)
+    elif update.callback_query.data == 'bitcoin':
+        bot.sendMessage(chat_id=update.callback_query.message.chat.id, text='In questo momento 1 bitcoin vale $%f' % round(getBitcoinPrice(),2))
+        bot.answer_callback_query(update.callback_query.id, text='In questo momento 1 bitcoin vale $%d' % getBitcoinPrice())
     elif update.callback_query.data == 'time':
         ts = time.time()
         bot.answer_callback_query(update.callback_query.id, text=datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S'))
@@ -68,11 +82,12 @@ def chatinfo(bot, update):
 
 def status(bot, update):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                         [InlineKeyboardButton(text='Bitcoin', callback_data='bitcoin'),],
                          [InlineKeyboardButton(text='IP', callback_data='ip'),
                          InlineKeyboardButton(text='Info', callback_data='info')],
                          [InlineKeyboardButton(text='Time', callback_data='time'),InlineKeyboardButton(text='Credits', callback_data='credits')],
                      ])
-    bot.send_message(chat_id=update.message.chat_id, text='BartoBot v0.1 \nSono qui per servivi (col cazzo,sai!):')
+    bot.send_message(chat_id=update.message.chat_id, text='BartoBot v0.3 \nSono qui per servivi (col cazzo,sai!):')
     bot.send_message(chat_id=update.message.chat_id, text=update.message.chat_id)
     bot.send_message(chat_id=update.message.chat_id, text='Scegli il comando', reply_markup=keyboard)
     # r = types.InlineQueryResultArticle(
@@ -128,7 +143,8 @@ def rosalba(bot, update):
 def rosaria(bot, update):
      bot.send_message(chat_id=update.message.chat_id, text='Tutti a o\'paesiello, ue ue!')
 
-
+def bitcoinvalue(bot, update):
+    bot.send_message(chat_id=update.message.chat_id, text='In questo momento 1 bitcoin vale $%d' % getBitcoinPrice() )
 # sistema per creare una grammatica
 # s_nouns = ["A dude", "My mom", "The king", "Some guy", "A cat with rabies", "A sloth", "Your homie", "This cool guy my gardener met yesterday", "Superman"]
 # p_nouns = ["These dudes", "Both of my moms", "All the kings of the world", "Some guys", "All of a cattery's cats", "The multitude of sloths living under your bed", "Your homies", "Like, these, like, all these people", "Supermen"]
@@ -160,12 +176,12 @@ saluti_partenza = ["Ciao, ora devo andare a trombare", "Ciao, ora devo andare a 
 frasi_buongiorno = [ "Buongiorno a te {}", "{} grazie","Grazie, ora andiamo a fare soldi", "grazie {}, stai bene?", "{}, son gia in ufficio, che poverta" ]
 frasi_bitcoin = ["Comprate i bitcoin, poi mi ringrazierete", "{} non vendere assolutamente i bitcoin!", "{}, penso che presto saro ricco" ]
 frasi_lucia = ["Fo passare Natale e il compleanno, cosi mi fa il regalo, poi la mollo", "Ufficialmente io sono rimasto a casa, niente tag su FB", "Appena c\'ha le sue cose la lascio", "Raga ho avuto un sogno e mi sono svegliato urlando. Al prossimo mestruo la lascio" ]
-frasi_roby2 = ["Che fia imperiale", "Il mese prossimo ci mettiamo insieme", "{} una fia del genere te la scordi", "Stasera se ci si vede non postate foto"]
+frasi_roby2 = ["Che fia imperiale", "Il mese prossimo ci mettiamo insieme", "{} una fia del genere te la scordi", "Stasera se ci si vede non postate foto", "{} stasera posso venire a trombarla da te? Non ha ancora pronta la casa"]
 frasi_cena_barto = ["Mangiare {}! MANGIARE!!!", "{}, imbuzzarsi!!", "Cibo!", "Ma quanto mangi {}?", "Mmmm che schifo!" ]
 frasi_cena_generiche = [ "MANGIARE!", "Mangiare. MANGIAREEEE!!!!", "Imbuzzarsi!!", "Cibo!", "Ma quanto mangiate?", "MANGIARE!" ]
 frasi_pesca = ["FISH!!!!", "Da vero maschio alpha" ]
 frasi_macchine = ["Domenica ho il raduno", "Devo comprare la McLaren", "Ho una ferrari per le mani", "Se piazzo la ferrari faccio tanti soldi", "Devo cambiare gli ammortizzatori", "Non e\' tanto comprarla. La botta e\' sull\'assicurazione furto incendio atti vandalici e mini kasko, almeno 3500 euro annui" ]
-frasi_fia = [ "Anale!", "Raga non insegnate al babbo a trombare", "Che puttana!", "Ue ciccia, sei bellissima", "Che fica anale!", "Che fica stratosferica", "{} piazzami sta fia", "La trombo nel culo" ]
+frasi_fia = [ "Anale!", "Raga non insegnate al babbo a trombare", "Che puttana!", "Ue ciccia, sei bellissima", "Che fica anale!", "Che fica stratosferica", "{} piazzami sta fia", "La trombo nel culo", "Che delizia assoluta" ]
 frasi_milan = ["Milan campione", "Ritorneremo!", "La gioco alla snai", "Si gioca contro le merde?", "Si vince sicuro" ]
 frasi_moralizzatori = [ "{} mi hai rotto il cazzo. Faccio come mi pare", "{} il moralizzatore","Sono arrivati i moralizzatori", "Fatevi i cazzi vostri",
             "Si esco con due ragazze e allora? chi non le ha oggigiorno", "Da vero maschio alpha", "{} guarda ormai dal punto di vista sentimentale vivo alla giornata e faccio cio che mi va" ]
@@ -175,8 +191,9 @@ frasi_tie = [ "Bene sai!", "Tie!", "Godo!"]
 frasi_ridere = [ "Cazzo ridi?", "{} cazzo ridi?", "Ah ah ah. Che ridere", "Sono contento vi faccia ridere", "ahahaha", "Bella questa"]
 frasi_palle = ["Siete sempre piu pelosi fate schifo!", "Vi ricordo che quando ve lo puppano gli rimane i peli tra i denti a me invece leccano anche sopra il cazzo dove voi avete i peli ed è una bella sensazione che voi non conoscerete mai babbazzi"]
 frasi_politica = [ "L\'Italia e\' allo sbando ed e\' tutta colpa del PD! Merdosi!", "Musulmani di merda!", "Comunisti maledetti!", "Vota Fratelli d\'Italia!" ]
+frasi_segreto = ["{} non lo dire a nessuno", "Oh {}, resta tra noi. Non lo dire a nessuno"]
 # traduzioni nomi
-nomi_cumpa = {'Cosimo': 'Zek', 'David': 'Mazza', 'Lorenzo': 'Cops', 'Fabrizio': 'Sancio', 'Simone': 'Scarlo', 'Alessandro': 'Barto', 'L': 'Paoli'}
+nomi_cumpa = {'Cosimo': 'Zek', 'David': 'Mazza', 'Lorenzo': 'Cops', 'Fabrizio': 'Sancio', 'Simone': 'Scarlo', 'Alessandro': 'Barto', 'L': 'Paoli', 'Francesco': 'Ciccio', 'Marco': 'Salva', 'Sandro': 'Sandrino'}
 
 def getNomecumpa(nome):
     if nome in nomi_cumpa:
@@ -233,7 +250,7 @@ def pesca(bot, update):
      bot.send_message(chat_id=update.message.chat_id, text=random.choice(frasi_pesca).format(getNomecumpa(update.message.from_user.first_name)))
 
 def poero(bot, update):
-     if update.message.from_user.first_name == "Alessandro":
+     if update.message.from_user.first_name == "Alessandro" or update.message.from_user.first_name == "Alex":
          poero_match = re.match(r"^.*[Pp]oero (.*)$", update.message.text, re.M|re.I)
          if poero_match:
              passbot.send_message(chat_id=update.message.chat_id, text='Davvero, {} e\' proprio un babbazzo.'.format(poero_match.group(1)))
@@ -294,6 +311,9 @@ def invocazione(bot, update):
     else:
         offendi(bot, update)
 
+def segreto(bot, update):
+    bot.send_message(chat_id=update.message.chat_id, text=random.choice(frasi_segreto).format(getNomecumpa(update.message.from_user.first_name)) )
+
 updater = Updater(token='399694218:AAErsV9BZ3Oev3J334AL66jPX80MMWF1--Q')
 dispatcher = updater.dispatcher
 # imposta i comandi
@@ -308,13 +328,18 @@ dispatcher.add_handler( CommandHandler('fantasia', fantasia) )
 dispatcher.add_handler( CommandHandler('shrek', shrek) )
 dispatcher.add_handler( CommandHandler('scandalo', scandalo) )
 dispatcher.add_handler( CommandHandler('sigla', sigla) )
+dispatcher.add_handler( CommandHandler('bitcoin', bitcoinvalue) )
 # bot.send_message(emojize("Barto :moyai:", use_aliases=True))
 
 # intercettori di testo dei messaggi
 regcops = re.compile(r"^(.*)[Cc]ops(.*)$")
 regmoai = re.compile(r"^(.*)"+emoji.emojize(':moyai:', use_aliases=True)+"(.*)$")
+regsegreto = re.compile(r"^.*(segreto|dire.*cosa).*$")
+regbitcoinvalue = re.compile(r"^.*([Qq]uanto.*val.*bitcoin).*$")
 dispatcher.add_handler(RegexHandler(regcops, cops))
 dispatcher.add_handler(RegexHandler(regmoai, sparajingle))
+dispatcher.add_handler(RegexHandler(regsegreto, segreto))
+dispatcher.add_handler(RegexHandler(regbitcoinvalue, bitcoinvalue))
 dispatcher.add_handler(RegexHandler(re.compile(r"^.*[Cc]olzi.*$"), colzi))
 dispatcher.add_handler(RegexHandler(re.compile(r"^.*([Cc]ome state|[Tt]utto bene).*$"), stobene))
 dispatcher.add_handler(RegexHandler(re.compile(r"^.*(macchina|lotus|ferrari|mclaren|auto).*$"), auto))
@@ -333,7 +358,7 @@ dispatcher.add_handler(RegexHandler(re.compile(r"^.*[Ll]ucy.*$"), lucy))
 dispatcher.add_handler(RegexHandler(re.compile(r"^.*[Ll]ucia.*$"), lucy))
 dispatcher.add_handler(RegexHandler(re.compile(r"^.*([Rr]oby2|[Rr]oby 2).*$"), roby2))
 dispatcher.add_handler(RegexHandler(re.compile(r"^.*foto.*scandalo.*$"), scandalo))
-dispatcher.add_handler(RegexHandler(re.compile(r"^.*(voto|politica|Meloni|[Bb]erlusconi).*$"), politica))
+dispatcher.add_handler(RegexHandler(re.compile(r"^.*(voto|politica|Meloni|[Bb]erlusconi|Salvini).*$"), politica))
 # dispatcher.add_handler(RegexHandler(re.compile(r"^(.*)[Cc]iao(.*)[Bb]arto(.*)$"), saluta))
 # dispatcher.add_handler(RegexHandler(re.compile(r"^(.*)[Pp]ens(.*)[Bb]arto(.*)$"), dare_ragione))
 # dispatcher.add_handler(RegexHandler(re.compile(r"^(.*)[Bb]arto(.*)$"), offendi))

@@ -7,6 +7,11 @@
 # per far parlare il bot si possono anche usare le direttive API secche:
 #
 # installare sul sistema ffmpeg: apt install ffmpeg
+# installare googletrans: pip3.7 install googletrans==3.1.0a0
+#
+# API:
+# pesci: https://www.fishwatch.gov/api/species
+
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler,  CallbackQueryHandler)
@@ -28,6 +33,7 @@ import subprocess
 
 # from lib import asciigen
 # asciigen.from_filename('./python-logo.png', width=40, contrast=1.8)
+from googletrans import Translator
 
 # gestione errori
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -46,7 +52,8 @@ def getBitcoinPrice():
         priceFloat = json.loads(r.text)["last"]
         return round(float(priceFloat), 2)
     except requests.ConnectionError:
-        return "Bitstamp API non va"
+        logger.warning("Bitstamp API non va")
+        return ''
 
 #funzione per generare audio
 def generaAudio(text):
@@ -57,6 +64,88 @@ def generaAudio(text):
     destination_path_audio = "audio/parola_del_barto.ogg"
     mp3_audio.export(destination_path_audio, format="opus")
     return destination_path_audio
+
+#generatore di meme random
+def generaGif():
+    URL = "https://api.giphy.com/v1/gifs/random?api_key=eWHGefzeudCFbj6Fro7pY85SPUsBWakT"
+    try:
+        r = requests.get(URL)
+        data = json.loads(r.text)["data"]
+        return data["images"]["original"]["mp4"]
+    except requests.ConnectionError:
+        logger.warning("Reddit API non va")
+        return ''
+
+#generatore di meme random
+def generaMeme():
+    URL = "https://meme-api.herokuapp.com/gimme/italianmemes"
+    try:
+        r = requests.get(URL)
+        imgUrl = json.loads(r.text)["preview"][-1]
+        return imgUrl
+    except requests.ConnectionError:
+        logger.warning("Reddit API non va")
+        return ''
+
+# immagine nasa del giorno
+def nasaOfTheDay():
+    URL = "https://www.fishwatch.gov/api/species"
+    try:
+        r = requests.get(URL)
+        result = json.loads(r.text)
+
+        translator = Translator()
+        translated = translator.translate(result["explanation"], src='en', dest='it')
+        result["explanation"] = translated.text
+        translated = translator.translate(result["title"], src='en', dest='it')
+        result["title"] = translated.text
+        return result
+    except requests.ConnectionError:
+        logger.warning("Reddit API non va")
+        return ''
+
+def infoPesce():
+    URL = "https://www.fishwatch.gov/api/species"
+    try:
+        r = requests.get(URL)
+        results = json.loads(r.text)
+        result = random.choice(results)
+        # re.sub('<[^<]+?>', '', text) # strip html
+        fish = {}
+        result_fish = {}
+        fish["Habitat"] = re.sub('<[^<]+?>', '', result["Habitat"])
+        fish["Habitat Impacts"] = re.sub('<[^<]+?>', '', result["Habitat Impacts"])
+        fish["Species Name"] = re.sub('<[^<]+?>', '', result["Species Name"])
+        fish["Fishing Rate"] = re.sub('<[^<]+?>', '', result["Fishing Rate"])
+        fish["Physical Description"] = re.sub('<[^<]+?>', '', result["Physical Description"])
+        fish["Biology"] = re.sub('<[^<]+?>', '', result["Biology"])
+        fish["Taste"] = re.sub('<[^<]+?>', '', result["Taste"])
+        translator = Translator()
+        # translated_fishs = translator.translate(fish, src='en', dest='it')
+        result_fish["Habitat"] = translator.translate(re.sub('\\.n', '\\n', fish["Habitat"]), src='en', dest='it')
+        result_fish["Habitat Impacts"] = translator.translate(re.sub('\\.n', '\\n', fish["Habitat Impacts"]), src='en', dest='it')
+        result_fish["Species Name"] = translator.translate(re.sub('\\.n', '\\n', fish["Species Name"]), src='en', dest='it')
+        result_fish["Fishing Rate"] = translator.translate(re.sub('\\.n', '\\n', fish["Fishing Rate"]), src='en', dest='it')
+        result_fish["Physical Description"] = translator.translate(re.sub('\\.n', '\\n', fish["Physical Description"]), src='en', dest='it')
+        result_fish["Biology"] = translator.translate(re.sub('\\.n', '\\n', fish["Biology"]), src='en', dest='it')
+        result_fish["Taste"] = translator.translate(re.sub('\\.n', '\\n', fish["Taste"]), src='en', dest='it')
+        result_fish["url"] = result["Species Illustration Photo"]["src"]
+        return result_fish
+    except requests.ConnectionError:
+        logger.warning("Reddit API non va")
+        return ''
+
+def quoteTrump():
+    URL = "https://www.tronalddump.io/random/quote"
+    try:
+        r = requests.get(URL)
+        quote = json.loads(r.text)["value"]
+    except requests.ConnectionError:
+        logger.warning("Tronalddump non va")
+        return ''
+    translator = Translator()
+    translated = translator.translate(quote, src='en', dest='it')
+    return translated.text
 
 # Update "
 # {'update_id': 323232463,
@@ -76,7 +165,9 @@ def generaAudio(text):
 #    }
 # }"
 #
+
 # Gestione del menu
+commands_list = "/barto\n/info\n/status\n/macron\n/vincosicuro\n/fantasia\n/shrek\n/scandalo\n/sigla\n/bitcoin\n/fish\n/nasa\n/gif\n/meme\n/trump\n/parla"
 def callbacks(update, context):
     if update.callback_query.data == "inline":
         print(update)
@@ -92,12 +183,24 @@ def callbacks(update, context):
     elif update.callback_query.data == 'bitcoin':
         context.bot.sendMessage(chat_id=update.callback_query.message.chat.id, text='In questo momento 1 bitcoin vale $%f' % round(getBitcoinPrice(),2))
         context.bot.answer_callback_query(update.callback_query.id, text='In questo momento 1 bitcoin vale $%d' % getBitcoinPrice())
+    elif update.callback_query.data == 'parla':
+        sparajingle_audio(update.callback_query, context)
+    elif update.callback_query.data == 'gif':
+        inviagif(update.callback_query, context)
+    elif update.callback_query.data == 'meme':
+        send_meme(update.callback_query, context)
+    elif update.callback_query.data == 'trump':
+        citazionetrump(update.callback_query, context)
+    elif update.callback_query.data == 'nasa':
+        fotonasa(update.callback_query, context)
     elif update.callback_query.data == 'time':
         ts = time.time()
         context.bot.answer_callback_query(update.callback_query.id, text=datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S'))
     elif update.callback_query.data == 'credits':
-        context.bot.sendMessage(chat_id=update.callback_query.message.chat.id, text='Cosimo Zecchi mio padrone e creatore')
-        context.bot.answer_callback_query(update.callback_query.id, text='Cosimo Zecchi mio padrone e creatore')
+        context.bot.sendMessage(chat_id=update.callback_query.message.chat.id, text='Cosimo Zecchi mio padrone e creatore. Per donazioni in btc: 3JDyBLvw3nRx54jesn9chtnRJpG7Ftc4o7')
+        context.bot.answer_callback_query(update.callback_query.id, text='Cosimo Zecchi mio padrone e creatore. Per donazioni in btc: 3JDyBLvw3nRx54jesn9chtnRJpG7Ftc4o7')
+    elif update.callback_query.data == 'help':
+        context.bot.sendMessage(chat_id=update.callback_query.message.chat.id, text=commands_list)
 
 def chatinfo(update, context):
     context.bot.send_message(chat_id=update.message.chat_id, text=update.message.chat_id )
@@ -105,11 +208,14 @@ def chatinfo(update, context):
 def status(update, context):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
                          [InlineKeyboardButton(text='Bitcoin', callback_data='bitcoin'),],
-                         [InlineKeyboardButton(text='IP', callback_data='ip'),
-                         InlineKeyboardButton(text='Info', callback_data='info')],
-                         [InlineKeyboardButton(text='Time', callback_data='time'),InlineKeyboardButton(text='Credits', callback_data='credits')],
+                         [InlineKeyboardButton(text='Parla', callback_data='parla'),],
+                         [InlineKeyboardButton(text='Gif', callback_data='gif'), InlineKeyboardButton(text='Meme', callback_data='meme')],
+                         [InlineKeyboardButton(text='Trump', callback_data='trump'), InlineKeyboardButton(text='Nasa', callback_data='nasa')],
+                         [InlineKeyboardButton(text='IP', callback_data='ip'), InlineKeyboardButton(text='Info', callback_data='info')],
+                         [InlineKeyboardButton(text='Time', callback_data='time'), InlineKeyboardButton(text='Credits', callback_data='credits')],
+                         [InlineKeyboardButton(text='Help', callback_data='help'),],
                      ])
-    context.bot.send_message(chat_id=update.message.chat_id, text='BartoBot v0.3 \nSono qui per servivi (col cazzo,sai!):')
+    context.bot.send_message(chat_id=update.message.chat_id, text='BartoBot v1.0 \nSono qui per servivi (col cazzo,sai!):')
     context.bot.send_message(chat_id=update.message.chat_id, text=update.message.chat_id)
     context.bot.send_message(chat_id=update.message.chat_id, text='Scegli il comando', reply_markup=keyboard)
     # r = types.InlineQueryResultArticle(
@@ -124,24 +230,25 @@ def status(update, context):
 def sigla(update, context):
     context.bot.send_audio(chat_id=update.message.chat_id, audio=open('sounds/neverending.mp3', 'rb'))
 
-def sendImage(context, imagename):
+def sendImage(update, context, imagename):
     context.bot.send_photo(chat_id=update.message.chat_id, photo=open('images/'+imagename+'.jpg', 'rb'))
 
 def macron(update, context):
-    sendImage(context, 'macron')
+    sendImage(update, context, 'macron')
 def fantasia(update, context):
-    sendImage(context, 'fantasia')
+    sendImage(update, context, 'fantasia')
 def macron(update, context):
-    sendImage(context, 'macron')
+    sendImage(update, context, 'macron')
 def shrek(update, context):
-    sendImage(context, 'shrek')
+    sendImage(update, context, 'shrek')
 def vincosicuro(update, context):
-    sendImage(context, 'vincosicuro')
+    sendImage(update, context, 'vincosicuro')
 def scandalo(update, context):
-    sendImage(context, 'praga')
+    sendImage(update, context, 'praga')
 def attilio(update, context):
-    sendImage(context, 'attilio')
+    sendImage(update, context, 'attilio')
     context.bot.send_message(chat_id=update.message.chat_id, text='Io voto Italia nel cuore. Viva Attilio!')
+
 
 # ripete quello che viene scritto
 def echo(update, context):
@@ -153,6 +260,24 @@ def sparajingle_audio(update, context):
     path_audio = generaAudio(random.choice(set_frasi).format(getNomecumpa(update.message.from_user.first_name)))
     context.bot.send_voice(chat_id=update.message.chat_id, voice=open(path_audio, 'rb'))
 
+# pesce random
+def scheda_pesce(update, context):
+    fish = infoPesce()
+    context.bot.send_message(chat_id=update.message.chat_id, text="Conoscete il %s ?" % fish["Species Name"].text)
+    context.bot.send_photo(chat_id=update.message.chat_id, photo=fish["url"], caption=fish["Species Name"].text)
+    context.bot.send_message(chat_id=update.message.chat_id, text="Bello vero?")
+    context.bot.send_message(chat_id=update.message.chat_id, text=fish["Physical Description"].text)
+    context.bot.send_message(chat_id=update.message.chat_id, text=fish["Biology"].text)
+    context.bot.send_message(chat_id=update.message.chat_id, text="A questo punto vi starete chiedendo dove vivono e come pescarli")
+    context.bot.send_message(chat_id=update.message.chat_id, text=fish["Habitat"].text)
+    context.bot.send_message(chat_id=update.message.chat_id, text=fish["Habitat Impacts"].text)
+    context.bot.send_message(chat_id=update.message.chat_id, text=fish["Fishing Rate"].text)
+    context.bot.send_message(chat_id=update.message.chat_id, text="Se vi interessa mangiarlo sappiate che:")
+    context.bot.send_message(chat_id=update.message.chat_id, text=fish["Taste"].text)
+
+# send meme
+def send_meme(update, context):
+    context.bot.sendPhoto( update.message.chat_id, generaMeme() )
 
 def cops(update, context):
      context.bot.send_message(chat_id=update.message.chat_id, text=random.choice(frasi_cops))
@@ -169,8 +294,21 @@ def rosalba(update, context):
 def rosaria(update, context):
      context.bot.send_message(chat_id=update.message.chat_id, text='Tutti a o\'paesiello, ue ue!')
 
+def citazionetrump(update, context):
+    context.bot.send_message(chat_id=update.message.chat_id, text='Trump una volta ha detto: %s' % quoteTrump() )
+
 def bitcoinvalue(update, context):
     context.bot.send_message(chat_id=update.message.chat_id, text='In questo momento 1 bitcoin vale $%d' % getBitcoinPrice() )
+
+def fotonasa(update, context):
+    nasa = nasaOfTheDay()
+    context.bot.send_photo(chat_id=update.message.chat_id, photo=nasa["url"], caption=nasa["title"])
+    context.bot.send_message(chat_id=update.message.chat_id, text=nasa["explanation"])
+
+def inviagif(update, context):
+    context.bot.send_video(chat_id=update.message.chat_id, video=generaGif())
+    context.bot.send_message(chat_id=update.message.chat_id, text="ahahaha")
+
 # sistema per creare una grammatica
 # s_nouns = ["A dude", "My mom", "The king", "Some guy", "A cat with rabies", "A sloth", "Your homie", "This cool guy my gardener met yesterday", "Superman"]
 # p_nouns = ["These dudes", "Both of my moms", "All the kings of the world", "Some guys", "All of a cattery's cats", "The multitude of sloths living under your bed", "Your homies", "Like, these, like, all these people", "Supermen"]
@@ -219,7 +357,7 @@ frasi_palle = ["Siete sempre piu pelosi fate schifo!", "Vi ricordo che quando ve
 frasi_politica = [ "L\'Italia e\' allo sbando ed e\' tutta colpa del PD! Merdosi!", "Musulmani di merda!", "Comunisti maledetti!", "Vota Fratelli d\'Italia!" ]
 frasi_segreto = ["{}, non lo dire a nessuno", "Oh {}, resta tra noi. Non lo dire a nessuno"]
 # traduzioni nomi
-nomi_cumpa = {'Cosimo': 'Zek', 'David': 'Mazza', 'Lorenzo': 'Cops', 'Fabrizio': 'Sancio', 'Simone': 'Scarlo', 'Alessandro': 'Barto', 'L': 'Paoli', 'Francesco': 'Ciccio', 'Marco': 'Salva', 'Sandro': 'Sandrino'}
+nomi_cumpa = {'Cosimo': 'Zek', 'David': 'Mazza', 'Lorenzo': 'Cops', 'Fabrizio': 'Sancio', 'Simone': 'Scarlo', 'Alex': 'Coglionazzo', 'L': 'Paoli', 'Francesco': 'Ciccio', 'Marco': 'Salva', 'Sandro': 'Sandrino'}
 
 def getNomecumpa(nome):
     if nome in nomi_cumpa:
@@ -340,6 +478,9 @@ def invocazione(update, context):
 def segreto(update, context):
     context.bot.send_message(chat_id=update.message.chat_id, text=random.choice(frasi_segreto).format(getNomecumpa(update.message.from_user.first_name)) )
 
+def help_list(update, context):
+    context.bot.sendMessage(chat_id=update.message.chat.id, text=commands_list)
+
 updater = Updater(token='399694218:AAErsV9BZ3Oev3J334AL66jPX80MMWF1--Q', use_context=True)
 dispatcher = updater.dispatcher
 # imposta i comandi
@@ -355,6 +496,13 @@ dispatcher.add_handler( CommandHandler('shrek', shrek) )
 dispatcher.add_handler( CommandHandler('scandalo', scandalo) )
 dispatcher.add_handler( CommandHandler('sigla', sigla) )
 dispatcher.add_handler( CommandHandler('bitcoin', bitcoinvalue) )
+dispatcher.add_handler( CommandHandler('fish', scheda_pesce) )
+dispatcher.add_handler( CommandHandler('nasa', fotonasa) )
+dispatcher.add_handler( CommandHandler('gif', inviagif) )
+dispatcher.add_handler( CommandHandler('meme', send_meme) )
+dispatcher.add_handler( CommandHandler('trump', citazionetrump) )
+dispatcher.add_handler( CommandHandler('parla', sparajingle_audio) )
+dispatcher.add_handler( CommandHandler('help', help_list) )
 # context.bot.send_message(emojize("Barto :moyai:", use_aliases=True))
 
 # intercettori di testo dei messaggi
@@ -374,6 +522,10 @@ dispatcher.add_handler(MessageHandler(Filters.regex(regsegreto), segreto))
 dispatcher.add_handler(MessageHandler(Filters.regex(regbitcoinvalue), bitcoinvalue))
 
 dispatcher.add_handler(MessageHandler(Filters.regex("^.*([Bb]arto.*parla).*$"), sparajingle_audio))
+dispatcher.add_handler(MessageHandler(Filters.regex("^.*([Bb]arto.*meme).*$"), send_meme))
+dispatcher.add_handler(MessageHandler(Filters.regex("^.*([Tt]rump).*$"), citazionetrump))
+dispatcher.add_handler(MessageHandler(Filters.regex("^.*([Bb]arto.*foto.*spazio).*$"), fotonasa))
+dispatcher.add_handler(MessageHandler(Filters.regex("^.*([Bb]arto.*gif).*$"), inviagif))
 dispatcher.add_handler(MessageHandler(Filters.regex("^.*[Cc]olzi.*$"), colzi))
 dispatcher.add_handler(MessageHandler(Filters.regex("^.*([Cc]ome state|[Tt]utto bene).*$"), stobene))
 dispatcher.add_handler(MessageHandler(Filters.regex("^.*(macchina|lotus|ferrari|mclaren|auto).*$"), auto))
